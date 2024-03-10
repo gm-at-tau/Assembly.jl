@@ -1,0 +1,13 @@
+name = "Assembly"
+uuid = "c88b625a-7f3e-4a29-b1a2-a8d67e6f0bde"
+authors = ["gm-at-tau <gm@mail.tau.ac.il>"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
