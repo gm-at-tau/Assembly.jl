@@ -3,8 +3,8 @@ module Assembly
 export @assembly, exec!, Machine
 
 Base.@kwdef struct Machine
-        reg::Dict{Symbol,UInt}
-        mem::Vector{UInt}
+        reg::Dict{Symbol,UInt32}
+        mem::Vector{UInt32}
 end
 
 struct Insn
@@ -15,9 +15,8 @@ struct Insn
 		@assert e.head == :call
 		argument = @view e.args[2:end]
 		typed = isa.(argument, Union{Symbol, Integer})
-		@assert all(typed) "Found $(argument[.!typed]) of types $(
-			typeof.(argument[.!typed]))."
-		new(e.args[1], Tuple(argument))
+		@assert all(typed) _error_message(Type, argument[.!typed])
+		new(e.args[1], Tuple((a isa Integer) ? UInt32(a) : a for a = argument))
 	end
 end
 
@@ -25,17 +24,7 @@ struct Routine
         insn::Vector{Insn}
 end
 
-function Base.print(io::IO, r::Routine)
-        for insn = r.insn
-                print(io, '\t')
-                print(io, rpad(insn.mnemonic, 4))
-                for arg = insn.argument
-                        print(io, ' ')
-                        print(io, arg)
-                end
-                print(io, '\n')
-        end
-end
+include("strings.jl")
 
 macro assembly(_Arch, block::Expr)
         @assert block.head == :block
