@@ -1,10 +1,12 @@
 module Assembly
 
-export @assembly, exec!, Machine
+export @assembly, exec!, Register, Machine
+
+include("register.jl")
 
 Base.@kwdef mutable struct Machine
 	pc::UInt
-        reg::Dict{Symbol,UInt32}
+        reg::Register
         mem::Vector{UInt32}
 end
 
