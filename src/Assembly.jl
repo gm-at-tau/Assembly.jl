@@ -2,7 +2,8 @@ module Assembly
 
 export @assembly, exec!, Machine
 
-Base.@kwdef struct Machine
+Base.@kwdef mutable struct Machine
+	pc::UInt
         reg::Dict{Symbol,UInt32}
         mem::Vector{UInt32}
 end
@@ -16,7 +17,7 @@ struct Insn
 		argument = @view e.args[2:end]
 		typed = isa.(argument, Union{Symbol, Integer})
 		@assert all(typed) _error_message(Type, argument[.!typed])
-		new(e.args[1], Tuple((a isa Integer) ? UInt32(a) : a for a = argument))
+		new(e.args[1], Tuple(argument))
 	end
 end
 
@@ -32,13 +33,14 @@ macro assembly(_Arch, block::Expr)
 end
 
 function exec!(M::Machine, r::Routine)
-        for insn = r.insn
-                exec!(M, insn)
+	while M.pc < length(r.insn)
+		exec!(M, r.insn[1+M.pc])
         end
 end
 
 function exec!(M::Machine, insn::Insn)
         local fn = getproperty(RISCV, insn.mnemonic)
+	M.pc += 0x1
         fn(M, insn.argument...)
 end
 

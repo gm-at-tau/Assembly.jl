@@ -8,8 +8,7 @@ const routine = @assembly RISCV begin
 	xor(x3, x2, x1)
 end
 
-
-@testset "reader" begin
+@testset "reader 1" begin
 	@test string(routine) == """
 	addi x1 x0 15
 	sw   x1 x1 1
@@ -18,13 +17,31 @@ end
 """
 end
 
-@testset "executor" begin
-	M = Machine(mem=zeros(256),
-		reg=Dict(:x0 => 0, :x1 => 0, :x2 => 0, :x3 => 0))
+@testset "executor 1" begin
+	M = RISCV.machine(ncells=256)
 	exec!(M, routine)
+	@test M.pc == 4
 	@test M.reg[:x0] == 0
 	@test M.reg[:x1] == 15
-	@test M.mem == (A = zeros(256); A[16] = 15; A)
+	@test M.mem == (A = zeros(UInt32, 256); A[16] = 15; A)
 	@test M.reg[:x1] == M.reg[:x2]
 	@test M.reg[:x3] == 0
+end
+
+
+const counter = @assembly RISCV begin
+	addi(x1, x0, 3)
+	add(x2, x2, x1)
+	addi(x1, x1, -1)
+	bne(x1, x0, -3)
+end
+
+@testset "executor 2" begin
+	M = RISCV.machine(ncells=256)
+	exec!(M, counter)
+	@test M.pc == 4
+	@test M.reg[:x0] == 0
+	@test M.reg[:x1] == 0
+	@test M.reg[:x2] == 6
+	@test M.mem == zeros(UInt32, 256)
 end
