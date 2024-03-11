@@ -2,51 +2,55 @@ module Assembly
 
 export @assembly, exec!, Machine
 
-function _asmodule(mod::Symbol, fn::Symbol)
-	eval(quote $mod.$fn end)
-end
-
 Base.@kwdef struct Machine
-	reg::Dict{Symbol, UInt}
-	mem::Vector{UInt}
+        reg::Dict{Symbol,UInt}
+        mem::Vector{UInt}
 end
 
-const Insn = Pair{Symbol, Tuple}
+struct Insn
+        mnemonic::Symbol
+        argument::Tuple
+
+	function Insn(e::Expr)
+		@assert e.head == :call
+		argument = @view e.args[2:end]
+		typed = isa.(argument, Union{Symbol, Integer})
+		@assert all(typed) "Found $(argument[.!typed]) of types $(
+			typeof.(argument[.!typed]))."
+		new(e.args[1], Tuple(argument))
+	end
+end
 
 struct Routine
-	insn::Vector{Insn}
+        insn::Vector{Insn}
 end
 
 function Base.print(io::IO, r::Routine)
-	for (mnemonic, ops) = r.insn
-		print(io, '\t')
-		print(io, rpad(mnemonic, 4))
-		for o = ops
-			print(io, ' ')
-			print(io, o)
-		end
-		print(io, '\n')
-	end
-end
-
-function _insn(e::Expr)
-	@assert e.head == :call
-	e.args[1] => Tuple(@view e.args[2:end])
+        for insn = r.insn
+                print(io, '\t')
+                print(io, rpad(insn.mnemonic, 4))
+                for arg = insn.argument
+                        print(io, ' ')
+                        print(io, arg)
+                end
+                print(io, '\n')
+        end
 end
 
 macro assembly(_Arch, block::Expr)
-	@assert block.head == :block
-	Routine([_insn(a) for a = block.args if a isa Expr])
+        @assert block.head == :block
+        Routine([Insn(a) for a = block.args if a isa Expr])
 end
 
 function exec!(M::Machine, r::Routine)
-	for insn = r.insn
-		exec!(M, insn)
-	end
+        for insn = r.insn
+                exec!(M, insn)
+        end
 end
 
 function exec!(M::Machine, insn::Insn)
-	_asmodule(:RISCV, insn[1])(M, insn[2]...)
+        local fn = getproperty(RISCV, insn.mnemonic)
+        fn(M, insn.argument...)
 end
 
 export RISCV
