@@ -2,12 +2,14 @@ module Assembly
 
 export @assembly, exec!, Register, Machine
 
+const Cell = Int32
+
 include("register.jl")
 
 Base.@kwdef mutable struct Machine
-	pc::UInt
+	pc::Cell
         reg::Register
-        mem::Vector{UInt32}
+        mem::Vector{Cell}
 end
 
 struct Insn

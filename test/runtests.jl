@@ -23,7 +23,7 @@ end
 	@test M.pc == 4
 	@test M.reg[:zero] == 0
 	@test M.reg[:t0] == 15
-	@test M.mem == (A = zeros(UInt32, 256); A[16] = 15; A)
+	@test M.mem == (A = zeros(Int32, 256); A[16] = 15; A)
 	@test M.reg[:t0] == M.reg[:t1]
 	@test M.reg[:t2] == 0
 end
@@ -43,5 +43,5 @@ end
 	@test M.reg[:zero] == 0
 	@test M.reg[:t0] == 0
 	@test M.reg[:t1] == 6
-	@test M.mem == zeros(UInt32, 256)
+	@test M.mem == zeros(Int32, 256)
 end
