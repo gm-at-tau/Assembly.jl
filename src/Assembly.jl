@@ -17,35 +17,50 @@ struct Insn
         argument::Tuple
 
 	function Insn(e::Expr)
-		@assert e.head == :call
+		@assert e.head == :call "Not a function call: `$e`."
 		argument = @view e.args[2:end]
-		typed = isa.(argument, Union{Symbol, Integer})
+		typed = isa.(argument, Union{Symbol, Integer, QuoteNode})
 		@assert all(typed) _error_message(Type, argument[.!typed])
 		new(e.args[1], Tuple(argument))
 	end
 end
 
 struct Routine
-        insn::Vector{Insn}
+	insn::Vector{Union{Symbol, Insn}}
+	labels::Dict{Symbol, Int}
 end
 
 include("strings.jl")
 
 macro assembly(_Arch, block::Expr)
-        @assert block.head == :block
-        Routine([Insn(a) for a = block.args if a isa Expr])
+	@assert block.head == :block
+	local insn = []
+	local labels = Dict{Symbol, Int}()
+	sizehint!(insn, length(block.args))
+	for line = block.args
+		if line isa QuoteNode
+			push!(insn, line.value)
+			labels[line.value] = length(insn)
+		elseif line isa Expr
+			push!(insn, Insn(line))
+		end
+	end
+	Routine(insn, labels)
 end
 
-function exec!(M::Machine, r::Routine)
+function exec!(M::Machine, r::Routine; labels=nothing)
 	while M.pc < length(r.insn)
-		exec!(M, r.insn[1+M.pc])
+		local insn = r.insn[M.pc += 1]
+		exec!(M, insn; labels=r.labels)
         end
 end
 
-function exec!(M::Machine, insn::Insn)
-        local fn = getproperty(RISCV, insn.mnemonic)
-	M.pc += 0x1
-        fn(M, insn.argument...)
+exec!(::Machine, ::Symbol; labels=nothing) = nothing
+
+function exec!(M::Machine, insn::Insn; labels=nothing)
+	local fn = getproperty(RISCV, insn.mnemonic)
+	fn(M, ((a isa QuoteNode) ? labels[a.value] - M.pc : a
+		for a = insn.argument)...)
 end
 
 export RISCV
